@@ -94,8 +94,8 @@ dnsrecon -d <domain name> -w > dnsrecon.txt
 dnsrecon -r 66.249.92.100-66.249.92.150
 
 # Passively detect IPv6 addresses.
-sudo /home/timmy/Applications/Network/pkg-thc-ipv6/passive_discovery6 -Ds eth1 > ipv6detect.txt
-sudo /home/timmy/Applications/Network/pkg-thc-ipv6/implementation6 -p eth0 fe80::5cec:b948:c751:66af
+sudo /home/user/Applications/Network/pkg-thc-ipv6/passive_discovery6 -Ds eth1 > ipv6detect.txt
+sudo /home/user/Applications/Network/pkg-thc-ipv6/implementation6 -p eth0 fe80::5cec:b948:c751:66af
 
 # Not so passive IPv4 detect **** Loud ARP **** Will map network. Don't use "-f" switch.
 sudo /usr/sbin/netdiscover -l ARPscanIP.txt 
