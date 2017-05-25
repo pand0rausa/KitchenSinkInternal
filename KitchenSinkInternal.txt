@@ -165,6 +165,9 @@ smbclient -I <192.168.1.31> -L MONKEY -N -U ""
 # Windows mount NFS share
 mount [–o Options] ComputerName:\ShareName {DeviceName | *} 
  mount -t cifs //192.168.101.100/sales /mnt/cifs -o username=shareuser,password=sharepassword,domain=owned
+ 
+# Windows one liners
+# https://github.com/madhuakula/wincmdfu
 
 --------------------------------------------------------------------------------------------------------------------
 
